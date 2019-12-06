@@ -1,0 +1,25 @@
+{
+  "name": "database_encrypt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/csomerville-yellow/DATABASE_ENCRYPT.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/csomerville-yellow/DATABASE_ENCRYPT/issues"
+  },
+  "homepage": "https://github.com/csomerville-yellow/DATABASE_ENCRYPT#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "libsodium-sumo": "^0.7.6",
+    "libsodium-wrappers-sumo": "^0.7.6",
+    "oprf": "^1.0.0"
+  }
+}
