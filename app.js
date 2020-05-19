@@ -1,6 +1,8 @@
+//import { Umbral, IEncryptedData, IEncrypted, IMalformed, IKey, IDecrypted, IEncryptedMap, IOCDataMap } from 'umbral';
+
 const http = require('http');
-const oprf = require('oprf');
-import { Umbral, IEncryptedData, IEncrypted, IMalformed, IKey, IDecrypted, IEncryptedMap, IOCDataMap } from 'umbral';
+const ORPF = require('oprf');
+//const crypto = require('crypto');
 const sodium = require('libsodium-wrappers-sumo');
 const express = require('express');
 const app = express();
@@ -8,31 +10,6 @@ const hostname = '127.0.0.1';
 const port = 3000;
 const umbral = require('umbral');
 
-
-// badgeID -> OPRF -> Shamirs Keys -> Output to clientn
-// Name 
-// Date
-// Place
-/**
- * Set up 2 servers
- * 
- * Send post request to server (google: post request express node)
- app.post("....") etc. 
-const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  _init_();
-  res.send("index.html"); //use a html tag with a static file. 
-});
-*/
-app.use(express.static('front-end'));
-app.get('/', function(req,res) {
-  res.render('index');
-})
-app.listen(3000, () => {
-  console.log(`Listening at port 3000`);
-  _init_();
-});
 
 function updateDict(encryptedDict, newDict) {
   for (let matchingIndex in newDict) {
@@ -48,29 +25,24 @@ function updateDict(encryptedDict, newDict) {
   }
 }
 
-// await _sodium.ready;
-// const _umbral = new Umbral(_sodium);
-const userKeyPair = _sodium.crypto_box_keypair();
-var [publicKeys, privateKeys] = generateKeys(2);
-const perpBadge = 1234;
-const lastName = 'Jenkins';
-const region = 'Washington DC';
-const district = 4;
-const id = {perpBadge, region, district, lastName};
-const perfID = JSON.stringify(id);
+function getRandom(max){
+  return Math.floor(Math.random() * Math.floor(max));
+}
 
-const randId = performOPRF(perpId);
-const encryptedDataA = _umbral.encryptData([randId], { perpId, userId: 'Alice' }, publicKeys, userKeyPair.privateKey);
-updateDict(encryptedDict, encryptedDataA.encryptedMap);
+function createRandString(){
 
-const encryptedDataB = _umbral.encryptData([randId], { perpId, userId: 'Bob' }, publicKeys, userKeyPair.privateKey);
-updateDict(encryptedDict, encryptedDataB.encryptedMap);
-
-for (let index in encryptedDict) {
-  for (let oc in encryptedDict[index]) {
-    const encrypted = encryptedDict[index][oc];
-    const decrypted = _umbral.decryptData(encrypted, publicKeys[oc], privateKeys[oc]);
+  const alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+      "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+  let name = "";
+  for (let i = 0; i < Math.random(128); i++) {
+      const index = getRandom(alphabet.length);
+      name += alphabet[index];
   }
+
+  if (name === "") {
+      name = "XXXXXX";
+  }
+  return name;
 }
 
 function performOPRF(input) {
@@ -83,11 +55,11 @@ function performOPRF(input) {
   return new Uint8Array(unmasked);
 }  
 
-function generateKeys(n) {
+function generateKeys(n, sodium) {
   const privateKeys = {};
   const publicKeys = {};
   for (let i = 0; i < n; i++) {
-    const keyPair = _sodium.crypto_box_keypair();
+    const keyPair = sodium.crypto_box_keypair();
     const id = createRandString();
 
     publicKeys[id] = keyPair.publicKey;
@@ -98,29 +70,29 @@ function generateKeys(n) {
 }
 
 
-// let encryptedDict: IEncryptedMap = {};
-
-// await _sodium.ready;
-// const _umbral = new Umbral(_sodium);
-
-// const userKeyPair = _sodium.crypto_box_keypair();
-
-// var [publicKeys, privateKeys] = generateKeys(1);
-
-// const perpId = createRandString();
-// let userId = createRandString();
-// const randId: Uint8Array = performOPRF(perpId);
-
-// const encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
-// updateDict(encryptedDict, encryptedDataA.encryptedMap);
-function generateRand(input, _oprf){
-  const sk = _oprf.generateRandomScalar();
-
-  const masked = _oprf.maskInput(input); //client mask generation
-
-  const salted = _oprf.scalarMult(masked.point, sk); //Server randomness to client input
+function generateRand(input, oprf /*secK*/){
   
-  return _oprf.unmaskInput(masked.point, masked.mask); //unmasked randomness 
+  const key = oprf.generateRandomScalar();
+  // console.log(in)
+  // End-2-End protocol
+  const maskedPoint = oprf.hashToPoint("input");
+  //console.log(maskedPoint)
+  const encodedP1 = oprf.encodePoint(maskedPoint.point, 'UTF-8');
+
+  //console.log(encodedP1)
+  //const decodedP1 = oprf.decodePoint(encodedP1, 'UTF-8');
+  //const saltedPoint = oprf.scalarMult(/*decodedP1,*/ key);
+ // const encodedP2 = oprf.encodePoint(saltedPoint, 'ASCII');
+
+  //const decodedP2 = oprf.decodePoint(encodedP2, 'ASCII');
+  return //oprf.unmaskPoint(/*decodedP2,*/ maskedPoint.mask);
+
+  // const masked = _oprf.maskInput(input); //client mask generation
+
+  // const salted = _oprf.scalarMult(masked.point, secK); //Server randomness to client input
+  
+  // return _oprf.unmaskInput(salted, masked.mask); //unmasked randomness 
+
 }
 
 
@@ -135,36 +107,82 @@ function generateRand(input, _oprf){
  * Check back in  
  */
 async function _init_() {
-    let encryptedDict = {};
     await sodium.ready; //initializing sodium
-    const _oprf = new oprf.OPRF(sodium); //initializing the oprf
+    
+  //const _oprf = new OPRF(); //initializing the oprf
+    // await _oprf.ready;
     const _umbral = new umbral.Umbral(sodium);
+    // const sk = _oprf.generateRandomScalar();
+    //console.log(sk)
      //server key generation
-    const userKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = sodium.crypto_box_keypair();
     
     const time = "22:30"
     const badge = "00000";
     const place = "Provdence, RI"
-    const randPlace = generateRand(badge, _oprf);
-    const randTime = generateRand(time, _oprf);
-    const randPlace = generateRand(place, _oprf);
+    //const randBadge = generateRand(badge, _oprf);
+      /* crypto.createHmac("sha256", <plaintext> )
+                 .update(body)
+                 .digest('base64') */
+    //const randTime = generateRand(time, _oprf);
+   
+    //const randPlace = generateRand(place, _oprf);
   
+  //Make another for comparing user
+    const userId1 = 'Seny';
+    const userId2 = 'Alice';
+    var encryptedDict = {}
 
-    const userId = 'Seny';
+   // var [publicKeys, privateKeys] = generateKeys(1, sodium)
+   const keyPair = sodium.crypto_box_keypair();
+   
+
+   var intArr = new Array(32).fill(0); 
+   
+   var timeArr = new Uint8Array(intArr);
+   const encryptedDataTime1 = _umbral.encryptData([timeArr], userId1, JSON.stringify({ userId1, badge, place, time }), [keyPair.publicKey], userKeyPair.privateKey);
+   var timeShare = Object.keys(encryptedDataTime1.encryptedMap)[0];
+   const eTimeShare = encryptedDataTime1.encryptedMap[timeShare];
+   
+   //Encrypted Time for user2
+  //  const encryptedDataTime2 = _umbral.encryptData([timeArr], userId2, JSON.stringify({ userId2, badge, place, time }), [keyPair.publicKey], userKeyPair.privateKey);
+  //  var timeShare2 = Object.keys(encryptedDataTime2.encryptedMap)[0]
+  //  updateDict(encryptedDict, encryptedDataTime2.encryptedMap)
+  //  //Checking if they match
+  //   console.log(encryptedDict)
+  //   const decrypted = _umbral.decryptData(encryptedDict, keyPair.publicKey, userKeyPair.privateKey);
+  //   console.log(decrypted)
+    var badgeArr = new Uint8Array(intArr);
+    const encryptedDataBadge1 = _umbral.encryptData([badgeArr], userId1, JSON.stringify({ userId1, badge, place, time }), [keyPair.publicKey], userKeyPair.privateKey);
+    var badgeShare = Object.keys(encryptedDataBadge1.encryptedMap)[0];
+    const eBadgeShare = encryptedDataBadge1.encryptedMap[badgeShare]
 
 
-    var [publicKeys, privateKeys] = generateKeys(1);
+    var placeArr = new Uint8Array(intArr);
+    const encryptedDataPlace = _umbral.encryptData([placeArr], userId1, JSON.stringify({ userId1, badge, place, time }), [keyPair.publicKey], userKeyPair.privateKey);
+     var placeShare = Object.keys(encryptedDataPlace.encryptedMap)[0];
+    const ePlaceShare = encryptedDataBadge1.encryptedMap[placeShare]
+    //console.log(keyPair.publicKey)
+    //console.log(encryptedDataTime.encryptedMap);
+    var shares = [eTimeShare, eBadgeShare, ePlaceShare]
 
-    const encryptedDataTime = _umbral.encryptData([randTime], userId, JSON.stringify({ userId, badge, place, time }), publicKeys, userKeyPair.privateKey);
-    const encryptedDataBadge = _umbral.encryptData([randBadge], userId, JSON.stringify({ userId, badge, place, time }), publicKeys, userKeyPair.privateKey);
-    const encryptedDataPlace = _umbral.encryptData([randPlace], userId, JSON.stringify({ userId, badge, place, time }), publicKeys, userKeyPair.privateKey);
-    //updateDict(encryptedDict, encryptedDataA.encryptedMap);
-  
-    console.log(encryptedDataTime);
-    console.log(encryptedDataBadge);
-    console.log(encryptedDataPlace);
+    for(let i = 0; i < 3; i++){
+      console.log("Key share: \n")
+      console.log(shares[i])
+      console.log("\n")
+    }
+    // console.log("Encrypted Time \n")
+    // console.log(encryptedDataTime);
+    // //console.log(encryptedDataBadge);
+    // console.log("Encrypted Place \n")
+    // console.log(encryptedDataPlace);
 
+
+    
 } 
+
+
+_init_();
 
 
 

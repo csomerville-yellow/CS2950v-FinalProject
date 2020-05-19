@@ -20,7 +20,7 @@
     "express": "^4.17.1",
     "libsodium-sumo": "^0.7.6",
     "libsodium-wrappers-sumo": "^0.7.6",
-    "oprf": "^1.0.0",
+    "oprf": "^2.0.0",
     "umbral": "^1.0.7"
   }
 }
