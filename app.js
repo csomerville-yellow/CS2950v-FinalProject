@@ -166,11 +166,17 @@ async function _init_() {
     //console.log(encryptedDataTime.encryptedMap);
     var shares = [eTimeShare, eBadgeShare, ePlaceShare]
 
-    for(let i = 0; i < 3; i++){
-      console.log("Key share: \n")
-      console.log(shares[i])
+    
+      console.log("Key share for time: \n")
+      console.log(shares[0])
       console.log("\n")
-    }
+      console.log("Key share for badge: \n")
+      console.log(shares[1])
+      console.log("\n")
+      console.log(shares[2])
+      console.log("Key share for place: \n")
+      console.log("\n")
+    
     // console.log("Encrypted Time \n")
     // console.log(encryptedDataTime);
     // //console.log(encryptedDataBadge);
