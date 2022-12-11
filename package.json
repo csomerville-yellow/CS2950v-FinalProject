@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/csomerville-yellow/DATABASE_ENCRYPT#readme",
   "dependencies": {
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "libsodium-sumo": "^0.7.6",
     "libsodium-wrappers-sumo": "^0.7.6",
     "oprf": "^2.0.0",
